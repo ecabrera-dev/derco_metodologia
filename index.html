@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Metodología del modelo Derco</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@600;700;800&display=swap">
+<style>
+/* Layout: ficha técnica de modelo (igual que la de Gildemeister) — columna de lectura central, tablas y gráficos a ancho completo, pestañas por segmento */
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --fg:#14202e; --muted:#5a6878; --line:#d9e0e8;
+  --navy:#1f3864; --blue:#2e75b6; --sky:#9dc3e6; --teal:#1a8f8a; --gold:#d9a400; --red:#c0504d; --grey:#9aa5b1;
+  --accent:#1f3864; --accent-soft:#e6edf6; --pos:#1a8f8a; --neg:#c0504d; --ok:#2e9e5b; --warn:#d9a400;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif; --body:"IBM Plex Sans","Segoe UI",Arial,sans-serif; --mono:"IBM Plex Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1621; --surface:#172131; --fg:#e4eaf2; --muted:#9aa8b8; --line:#2a3748;
+  --navy:#8fb4e3; --blue:#5aa0e0; --sky:#3d6f9e; --teal:#3fc1b9; --gold:#e8be3c; --red:#e07a76; --grey:#6f7c8a;
+  --accent:#8fb4e3; --accent-soft:#1d2d44; --pos:#3fc1b9; --neg:#e07a76; --ok:#3fc17b; --warn:#e8be3c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1621; --surface:#172131; --fg:#e4eaf2; --muted:#9aa8b8; --line:#2a3748;
+  --navy:#8fb4e3; --blue:#5aa0e0; --sky:#3d6f9e; --teal:#3fc1b9; --gold:#e8be3c; --red:#e07a76; --grey:#6f7c8a;
+  --accent:#8fb4e3; --accent-soft:#1d2d44; --pos:#3fc1b9; --neg:#e07a76; --ok:#3fc17b; --warn:#e8be3c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(28px,4.4vw,42px);line-height:1.08;font-weight:800}
+h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+h3{font-size:18px;font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--muted)}
+header.hero{padding-top:40px;display:flex;flex-direction:column;gap:14px;border-bottom:2px solid var(--fg);padding-bottom:28px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 24px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.num{font-variant-numeric:tabular-nums}
+code,.mono{font-family:var(--mono)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:1px solid var(--line);background:var(--surface)}
+.step{padding:16px 16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;position:relative;min-width:0}
+.step:last-child{border-right:0}
+.step .n{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.step b{font-family:var(--display);font-size:15px;line-height:1.2}
+.step span{font-size:13px;color:var(--muted)}
+.step.q{border-top:4px solid var(--blue)} .step.a{border-top:4px solid var(--teal)} .step.e{border-top:4px solid var(--gold)} .step.s{border-top:4px solid var(--fg)}
+.legend-row{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:6px}
+/* tabs */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.tab{font:600 14px var(--body);padding:9px 16px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.tab:focus-visible,.seg:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.panel{display:flex;flex-direction:column;gap:40px}
+.block{background:var(--surface);border:1px solid var(--line);padding:22px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.block-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border:1px solid currentColor}
+.tag.q{color:var(--blue)} .tag.a{color:var(--teal)} .tag.e{color:var(--gold)}
+.eq{font-family:var(--mono);font-size:13.5px;background:var(--accent-soft);padding:14px 16px;overflow-x:auto;white-space:nowrap;line-height:1.9}
+.eq .b{color:var(--accent);font-weight:500}
+.eq .cm{color:var(--muted);font-size:12.5px}
+.scroll{overflow-x:auto;min-width:0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--fg)}
+td:first-child,th:first-child{text-align:left}
+td.l,th.l{text-align:left;white-space:normal}
+td.cn{text-align:left;white-space:normal;color:var(--muted);font-size:12.5px;min-width:220px}
+tr.hl td{background:var(--accent-soft)}
+tr.anc td{font-weight:600}
+td.pos,.pos{color:var(--pos)} td.neg,.neg{color:var(--neg)}
+.note{font-size:13px;color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{border-left:3px solid var(--line);padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card.q{border-color:var(--blue)} .card.a{border-color:var(--teal)} .card.e{border-color:var(--gold)}
+.card b{font-family:var(--display)}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--mono);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
+.ro{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;min-height:22px;color:var(--fg)}
+.ro .y{font-family:var(--mono);color:var(--muted)}
+.segs{display:flex;gap:0;border:1px solid var(--line);width:max-content;max-width:100%;flex-wrap:wrap}
+.seg{font:500 13px var(--body);padding:6px 12px;background:var(--surface);color:var(--fg);border:0;border-right:1px solid var(--line);cursor:pointer}
+.seg:last-child{border-right:0}
+.seg[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.calc{font-family:var(--mono);font-size:13px;line-height:1.9;overflow-x:auto;white-space:nowrap}
+.calc .r{color:var(--accent);font-weight:500}
+.kpis{display:flex;gap:10px;flex-wrap:wrap}
+.kpi{border:1px solid var(--line);padding:9px 14px;background:var(--surface);min-width:120px}
+.kpi b{display:block;font:700 21px var(--display);font-variant-numeric:tabular-nums}.kpi span{font-size:12px;color:var(--muted)}
+.sld{margin:0 0 12px}.sld .sh{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:600}.sld .sh em{font-weight:400;color:var(--muted);font-style:normal}.sld .sh b{color:var(--accent);font-family:var(--mono)}
+.sld input{width:100%;accent-color:var(--teal);margin:4px 0 0}
+.btn{font:500 13px var(--body);border:1px solid var(--fg);background:var(--surface);color:var(--fg);padding:5px 14px;cursor:pointer;align-self:flex-start}.btn:hover{background:var(--fg);color:var(--bg)}
+.st{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:-1px}.st.ok{background:var(--ok)}.st.warn{background:var(--warn)}.st.na{background:var(--grey)}
+dl.gl{display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:10px 22px;margin:0}
+dl.gl dt{font-weight:600} dl.gl dd{margin:0;color:var(--muted);min-width:0}
+@media (max-width:560px){dl.gl{grid-template-columns:1fr} .step{border-right:0;border-bottom:1px solid var(--line)}}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="hero">
+  <span class="eyebrow">APOYO Consultoría · Estudios Económicos · Derco</span>
+  <h1>Cómo proyectamos la venta nacional de vehículos nuevos de Derco</h1>
+  <p class="lede">Un ancla observada (2026 = ene-set × 12/9) y una cadena de modelos: el volumen de cada categoría por MCO, el reparto SUV/automóviles por logit, camiones y lujo con modelos propios, y el reparto por zona con un panel ECM reconciliado al nacional. El LASSO ordena las variables candidatas; el modelo final se estima por MCO.</p>
+  <div class="meta"><span>Variable: unidades inmatriculadas (AAP-SUNARP)</span><span>Segmentos: Ligeros (SUV + Passengers) · Pick Up · Commercial · Camiones +3 t · Lujo</span><span>Escenario: optimista · Horizonte 2030</span><span>Versión vigente: noviembre 2026</span></div>
+</header>
+
+<section>
+  <span class="eyebrow">El recorrido de una cifra</span>
+  <h2>De los datos a la proyección 2030</h2>
+  <div class="pipe" id="pipe"></div>
+  <div class="legend-row"><span><i class="sw" style="background:var(--fg)"></i>Datos y selección</span><span><i class="sw" style="background:var(--blue)"></i>Volumen nacional de livianos</span><span><i class="sw" style="background:var(--teal)"></i>Otros segmentos y zonas</span><span><i class="sw" style="background:var(--gold)"></i>Escenarios y bandas</span></div>
+</section>
+
+<section>
+  <span class="eyebrow">Paso previo · estimación</span>
+  <h2>Cómo se obtuvieron los betas</h2>
+  <div class="two">
+    <div class="card q"><b>Selección: el LASSO como diagnóstico</b><p>Con 16 años de datos (2011-2026) y decenas de candidatas macro, se corrió un LassoCV (4 bloques) con las variables estandarizadas, contemporáneas y con un rezago, hasta 3 variables por segmento. Sirve para ordenar candidatas; la especificación final se fijó con criterio económico.</p></div>
+    <div class="card q"><b>Volumen: MCO en Δln anual</b><p>Mínimos cuadrados ordinarios (MCO) sobre el cambio logarítmico anual de las unidades de cada categoría, 2011-2026 (n = 16). Es la estimación «post-LASSO»: los coeficientes no se encogen y hay errores estándar, t y p.</p></div>
+    <div class="card a"><b>Reparto: logit fraccional</b><p>La participación del SUV en Ligeros se explica con el ratio de precio FOB SUV/automóviles (a = 7,38; b = −4,30; t = −5,8) y se ancla a la participación observada de 2026.</p></div>
+    <div class="card"><b>Validación</b><p>R², MAPE del nivel, Durbin-Watson, Jarque-Bera, Breusch-Pagan, F global, VIF y ADF. Las pruebas que no se pasan se marcan en ámbar en cada ficha.</p></div>
+  </div>
+  <div class="block">
+    <div class="block-h"><h3>LASSO: qué hace la penalidad α con los coeficientes</h3><span class="tag q">Selección de variables</span></div>
+    <div class="eq">
+      <span class="cm">1 · Punto de partida</span><br>Δln Y<sub>t</sub> = β₀ + Σ<sub>j</sub> β<sub>j</sub>·z<sub>jt</sub> + ε<sub>t</sub><br>
+      <span class="cm">2 · LASSO: castiga el tamaño de los coeficientes (z estandarizada)</span><br>β̂<sup>L</sup> = argmin<sub>β</sub> [ (1/2n) Σ<sub>t</sub> (Δln Y<sub>t</sub> − β₀ − Σ<sub>j</sub> β<sub>j</sub>·z<sub>jt</sub>)² + <span class="b">α</span>·Σ<sub>j</sub> |β<sub>j</sub>| ]<br>
+      <span class="cm">3 · α por validación cruzada (4 bloques)</span><br>α* = argmin<sub>α</sub> ECM<sub>cv</sub>(α)<br>
+      <span class="cm">4 · Post-LASSO: se estima por MCO sobre las variables elegidas</span><br>β̂ = (X′X)⁻¹ X′y
+    </div>
+    <p>Cuanto mayor es α, más coeficientes quedan exactamente en cero: sobreviven las variables con más señal. La ilustración usa los coeficientes estandarizados del modelo final y la regla de umbral blando β̂<sup>L</sup><sub>j</sub> = signo(β̂<sub>j</sub>)·máx(|β̂<sub>j</sub>| − α, 0), válida con regresores ortogonales; no es el camino completo del LASSO.</p>
+    <div class="block-h"><div class="segs" id="lsel"></div></div>
+    <div class="sld"><div class="sh"><span>Penalidad α <em>· en desviaciones de Δln Y</em></span><b id="vA">0,00</b></div><input type="range" id="iA" min="0" max="0.9" step="0.02" value="0" aria-label="Penalidad alfa"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--sky)"></i>MCO (estandarizado)</span><span><i class="sw" style="background:var(--navy)"></i>LASSO con α</span></div>
+    <div class="chart" id="cL"></div>
+    <div class="ro" id="rL"></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Principios comunes</span>
+  <h2>Cuatro reglas que valen para todos los segmentos</h2>
+  <div class="two">
+    <div class="card q"><b>Ancla observada</b><p>2026 no se proyecta: es enero-setiembre × 12/9 (257,5 mil livianos). El cliente fijó 250 mil al 2026 y más de 300 mil al 2030 como referencia; el modelo parte de ese dato.</p></div>
+    <div class="card q"><b>Cadena de Δln</b><p>Cada año la unidad se obtiene del año anterior: Yₜ = Yₜ₋₁·exp(Δln Yₜ), con Δln Yₜ = β₀ + Σ βⱼ·xⱼₜ. Solo cuentan las sendas proyectadas de los insumos desde 2027; el error de nivel de 2026 no se arrastra.</p></div>
+    <div class="card a"><b>Todo cuadra</b><p>Livianos = SUV + Passengers + Pick Up + Commercial. En el reparto por zona, cada año las unidades de las zonas suman el total nacional del paso anterior.</p></div>
+    <div class="card e"><b>Un escenario, con bandas</b><p>El forecast se entrega solo en el escenario optimista, con bandas de ±1 error estándar. La presentación final lo escala a 400, 450 y 500 mil mediante un escalar λ sobre choques lineales de los insumos 2027-2030.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Ficha por segmento</span>
+  <h2>Variables, betas, indicadores y la cuenta hasta la cifra final</h2>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="panel" class="panel" role="tabpanel"></div>
+</section>
+
+<section>
+  <span class="eyebrow">Pruébalo</span>
+  <h2>Simulador: qué pasa con los livianos si cambian los insumos</h2>
+  <div class="block">
+    <div class="block-h"><h3>Livianos 2026-2030 con tus supuestos</h3><span class="tag e">Mismos betas, otros insumos</span></div>
+    <p class="note">Con todos los controles en su posición inicial se reproduce la proyección vigente (322,4 mil livianos y 188,7 mil SUV en 2030). Los cambios se aplican a la senda de cada año desde 2027.</p>
+    <div class="two" style="align-items:start">
+      <div><div id="sl"></div><button class="btn" id="rst">Restablecer</button></div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="kpis" id="k3"></div>
+        <div class="segs" id="s3"></div>
+        <div class="legend" id="l3"></div>
+        <div class="chart" id="c3"></div>
+        <div class="ro" id="r3"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Glosario</span>
+  <h2>Términos que aparecen en las fichas</h2>
+  <dl class="gl">
+    <dt>β (beta)</dt><dd>Coeficiente estimado. En los modelos en Δln: cambio de Δln de las unidades por cada unidad de la variable (≈ 100·β puntos porcentuales de crecimiento). En camiones (log-log): elasticidad.</dd>
+    <dt>e.e. y p</dt><dd>Error estándar del coeficiente y p-valor. *** p &lt; 0,05; * p &lt; 0,10.</dd>
+    <dt>β·x (aporte)</dt><dd>Coeficiente por el valor del insumo ese año: cuántos puntos aporta la variable al crecimiento del modelo.</dd>
+    <dt>Δln</dt><dd>Diferencia del logaritmo natural: aproxima la variación porcentual anual. Variación % = exp(Δln) − 1.</dd>
+    <dt>MAPE</dt><dd>Error porcentual absoluto medio del nivel ajustado frente al observado.</dd>
+    <dt>Durbin-Watson</dt><dd>Autocorrelación de los residuos; cerca de 2 es lo deseable.</dd>
+    <dt>Jarque-Bera / Breusch-Pagan</dt><dd>Normalidad de los residuos / varianza constante. p &gt; 0,05 indica que se pasa la prueba.</dd>
+    <dt>VIF / ADF</dt><dd>Colinealidad entre regresores / estacionariedad de la serie (p &lt; 0,05 la rechaza raíz unitaria).</dd>
+    <dt>ATSM Niño 1+2</dt><dd>Anomalía de temperatura del mar en la región Niño 1+2, en °C; se usa como supuesto de escenario en camiones.</dd>
+    <dt>ECM</dt><dd>Modelo de corrección de error: el cambio de corto plazo corrige parte de la desviación del equilibrio de largo plazo.</dd>
+  </dl>
+</section>
+
+<footer>Fuente: AAP-SUNARP (unidades inmatriculadas); DataSAE, SOFI e insumos proyectados SAE; Veritrade (precios FOB); modelos y cálculos de APOYO Consultoría. Libros: modelo_nacional_livianos.xlsx, modelo_camiones_optimista.xlsx, proyección regional final. 2026 = enero-setiembre × 12/9.</footer>
+</div>
+
+<script>
+const D = {"anios": [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030], "SUV": [41190.0, 47699.0, 46002.0, 49386.0, 39166.0, 62744.0, 71018.0, 74943.0, 74091.0, 96530.0, 143363.0, 156332.6, 165426.5, 174669.0, 188674.1], "AUTOS": [76724.0, 74843.0, 61440.0, 57058.0, 37160.0, 46029.0, 37371.0, 34113.0, 26767.0, 27700.0, 35834.0, 33000.5, 29615.0, 26627.8, 24591.2], "PICKUP": [12310.0, 14136.0, 15615.0, 18460.0, 15510.0, 23199.0, 26322.0, 26756.0, 24109.0, 30886.0, 37407.0, 40198.4, 42558.3, 44705.2, 46960.4], "COMM": [23652.0, 26990.0, 25353.0, 27093.0, 20345.0, 25128.0, 25103.0, 28673.0, 26095.0, 31865.0, 40854.0, 45864.7, 51458.2, 56540.5, 62124.7], "LIG": [117914.0, 122542.0, 107442.0, 106444.0, 76326.0, 108773.0, 108389.0, 109056.0, 100858.0, 124230.0, 179197.0, 189333.1, 195041.5, 201296.8, 213265.3], "TOT": [153876.0, 163668.0, 148410.0, 151997.0, 112181.0, 157100.0, 159814.0, 164485.0, 151062.0, 186981.0, 257458.0, 275396.3, 289058.0, 302542.5, 322350.5], "part": [0.3493, 0.3892, 0.4282, 0.464, 0.5131, 0.5768, 0.6552, 0.6872, 0.7346, 0.777, 0.8, 0.8257, 0.8482, 0.8677, 0.8847], "ratio": [2.032, 1.7437, 1.7166, 1.6773, 1.5774, 1.5456, 1.5512, 1.6054, 1.5738, 1.6164, 1.58, 1.5408, 1.5025, 1.4652, 1.4288], "CAM": [12808.0, 12508.0, 12678.0, 12348.0, 10773.0, 15680.0, 15311.0, 15095.0, 15308.0, 20806.0, 28488.0, 22624, 27805, 27047, 27047], "LUJ": [4896.0, 5797.0, 5086.0, 5166.0, 3070.0, 3634.0, 3112.0, 3818.0, 3962.0, 4028.0, 5109.3, 5782.2, 6640.8, 7316.4, 7889.1], "LUJ_lo": [null, null, null, null, null, null, null, null, null, null, null, 5195.0, 5666.1, 5983.9, 6218.5], "LUJ_hi": [null, null, null, null, null, null, null, null, null, null, null, 6435.8, 7783.2, 8945.7, 10008.5], "var": {"cons": [3.632, 3.355, 3.103, 3.849, 3.77, 3.77], "invp": [9.978, 14.518, 12.48, 11.002, 7.454, 7.454], "invt": [9.045, 11.655, 10.375, 10.284, 7.207, 7.207], "mora": [5.0949, 4.64, 4.64, 4.64, 4.64, 4.64], "px": [16.6495, 22.6, -1.4, -2.1, 0.3, 0.3], "oro": [3412.457487183869, 4601.446663411458, 4750, 4500, 4300, 4300], "ipc": [115.3656588333333, 119.9252630076908, 124.2489194542334, 127.3955233394118, 130.5804114228971, 133.8449217084695], "ipcv": [109.4257, 104.1986327081862, 106.1798914756497, 108.8688972272706, 111.5906196579523, 114.3803851494011], "rip": [0.9888669423543608, 0.9706343038263209, 0.9674112668226612, 0.9675794084498209, 0.9677437251327045, 0.9679063846083881], "dlnoro": [0.3569860343295221, 0.29893804363338083, 0.03177387194778908, -0.05406722127027582, -0.04546237407675729, 0.0], "anios": [2025, 2026, 2027, 2028, 2029, 2030]}, "sim": {"cons": [3.355, 3.103, 3.849, 3.77, 3.77], "invp": [14.518, 12.48, 11.002, 7.454, 7.454], "invt": [11.655, 10.375, 10.284, 7.207, 7.207], "mora": [4.64, 4.64, 4.64, 4.64, 4.64], "px": [22.6, -1.4, -2.1, 0.3, 0.3], "oro": [4601.446663411458, 4750, 4500, 4300, 4300], "ipc": [119.9252630076908, 124.2489194542334, 127.3955233394118, 130.5804114228971, 133.8449217084695], "ipcv": [104.1986327081862, 106.1798914756497, 108.8688972272706, 111.5906196579523, 114.3803851494011], "Y26": {"LIG": 179197.0, "PU": 37407.0, "COM": 40854.0}, "p26": 0.8000301344330542, "ratio26": 1.580048088368328, "r": -0.024845113848108835}, "coef": {"Ligeros": [["Intercepto", 2.758858579621252, 1.789531359597071, 0.09877673185712688, 1.541665400176297], ["D_ln Precio del oro (US$/oz)", 0.5865040142843934, 3.501925557637799, 0.004366355329642771, 0.1674804345869693], ["Consumo privado (var. % real)", 0.0342093203352286, 6.004857126786959, 6.170588026530156e-05, 0.005696941594600953], ["ln(IPC vehiculos) / ln(IPC)", -2.923910040149331, -1.865305391516102, 0.08676693995277657, 1.567523502289781]], "PICK UP": [["Intercepto", -0.003890456523005993, -0.1332689554836141, 0.8960215589828555, 0.02919251905958203], ["Inversion privada (var. % real)", 0.006848288983346731, 2.245522411820553, 0.04275939214743, 0.003049753120831466], ["Precios de exportacion (var. %)", 0.006861302505049702, 2.499635062834618, 0.02660708684995149, 0.002744921691596411]], "COMMERCIAL": [["Intercepto", 0.2050307270559903, 1.628990948216719, 0.1272949428795389, 0.1258636380272344], ["Inversion total (var. % real)", 0.006788212643675012, 2.520245514461886, 0.02559214480515989, 0.002693472760777597], ["Mora de consumo (puntos, fdp)", -0.03443244697438214, -1.577571899684474, 0.1386784058580688, 0.02182622990512755]]}, "logit": {"a": 7.381346530850197, "b": -4.304540220361583, "tb": -5.783684524393492}, "fit": {"LIG": {"r2": 0.8059186667144379, "mape": 6.280453031598706, "dw": 1.997913169641049, "n": 16, "rmse": 8.132547048954011, "jb": 0.9061480958435525, "r2a": 0.7573983333930474, "fp": 0.0001430883195192499, "adf": 0.01334152096199605, "bp": 0.4692008077360202, "vif": 1.161121506633387, "emax": 15.76850211361149, "yemax": 2024}, "PU": {"r2": 0.7064228086553667, "mape": 8.67681805937294, "dw": 2.656610848165338, "n": 16, "rmse": 9.593294548037047, "jb": 0.6257218165849565, "r2a": 0.6612570869100385, "fp": 0.0003468925902217955, "adf": 0.0023217159995932, "bp": 0.3971600113204185, "vif": 1.693290840297692, "emax": 19.12955246850994, "yemax": 2024}, "COM": {"r2": 0.5679000403232121, "mape": 6.982697918865842, "dw": 2.53936598532295, "n": 16, "rmse": 8.726903033082667, "jb": 0.6451281027252227, "r2a": 0.5014231234498601, "fp": 0.004278558432917167, "adf": 0.9988545930501814, "bp": 0.8058411049456171, "vif": 1.333190227264715, "emax": -16.52966741470895, "yemax": 2023}}, "reg": {"TOT": {"lima": [103284.0, 110853.0, 97948.0, 101711.0, 72337.0, 92415.0, 94300.0, 101541.0, 93356.0, 111595.0, 151073.0, 170748.1, 183221.4, 191816.7, 203867.4], "norte": [17690.0, 17466.0, 17406.0, 17470.0, 15094.0, 25678.0, 24247.0, 22680.0, 20042.0, 24782.0, 34770.0, 36140.2, 33563.8, 34173.4, 36036.0], "sur": [24069.0, 26572.0, 24589.0, 23526.0, 17684.0, 29658.0, 31726.0, 29596.0, 28141.0, 36896.0, 52635.0, 49916.9, 52847.6, 56833.4, 61890.3], "centro": [6768.0, 6834.0, 6494.0, 6997.0, 5297.0, 7465.0, 7318.0, 8575.0, 7596.0, 10828.0, 15570.0, 15021.9, 15624.7, 15787.2, 16418.2], "oriente": [2064.0, 1943.0, 1971.0, 2291.0, 1767.0, 1884.0, 2223.0, 2093.0, 1927.0, 2880.0, 3615.0, 3569.2, 3800.4, 3931.8, 4138.6]}, "SUV": {"lima": [32074.0, 36669.0, 34370.0, 36598.0, 27425.0, 39328.0, 45182.0, 50585.0, 50516.0, 63183.0, 91891.0, 104194.4, 113782.0, 120604.5, 130409.5], "norte": [3286.0, 3829.0, 4189.0, 4531.0, 4652.0, 9433.0, 9736.0, 9199.0, 8759.0, 11633.0, 18075.0, 19431.6, 17086.1, 17229.5, 18309.4], "sur": [4261.0, 5395.0, 5341.0, 5722.0, 4867.0, 10142.0, 12195.0, 10714.0, 10587.0, 14942.0, 23469.0, 22952.2, 24202.6, 26196.2, 28643.5], "centro": [1104.0, 1223.0, 1513.0, 1868.0, 1694.0, 3067.0, 3001.0, 3538.0, 3305.0, 5298.0, 8074.0, 7835.8, 8310.8, 8519.1, 9052.3], "oriente": [465.0, 583.0, 588.0, 667.0, 528.0, 774.0, 904.0, 907.0, 924.0, 1474.0, 1967.0, 1918.6, 2045.0, 2119.6, 2259.5]}, "AUTOS": {"lima": [48050.0, 46732.0, 37638.0, 36328.0, 22761.0, 25173.0, 20415.0, 19661.0, 15535.0, 14720.0, 18221.0, 18692.4, 17031.0, 15327.0, 14092.0], "norte": [10271.0, 9362.0, 8639.0, 7771.0, 5500.0, 8033.0, 5943.0, 5017.0, 3568.0, 3842.0, 5069.0, 4586.3, 4167.7, 3759.6, 3479.2], "sur": [13831.0, 14420.0, 11600.0, 9607.0, 6552.0, 10237.0, 8879.0, 7136.0, 5986.0, 7084.0, 9793.0, 7397.2, 6359.2, 5712.4, 5343.9], "centro": [3669.0, 3595.0, 2910.0, 2636.0, 1765.0, 2024.0, 1692.0, 1936.0, 1400.0, 1760.0, 2314.0, 1946.3, 1725.0, 1534.5, 1407.3], "oriente": [902.0, 734.0, 653.0, 715.0, 582.0, 562.0, 442.0, 363.0, 278.0, 294.0, 443.0, 378.2, 332.1, 294.3, 268.8]}, "PICKUP": {"lima": [7175.0, 9105.0, 9059.0, 10792.0, 8328.0, 12342.0, 13642.0, 13666.0, 12200.0, 15854.0, 18568.0, 20989.4, 23001.1, 24288.9, 25568.3], "norte": [1953.0, 1822.0, 2166.0, 2599.0, 2765.0, 4774.0, 5386.0, 5226.0, 4707.0, 5638.0, 7074.0, 7201.1, 6630.6, 6852.8, 7182.3], "sur": [2176.0, 2352.0, 3246.0, 3578.0, 3028.0, 4296.0, 5173.0, 5781.0, 5201.0, 6719.0, 8448.0, 8522.3, 9098.3, 9595.2, 10081.0], "centro": [643.0, 542.0, 751.0, 922.0, 925.0, 1395.0, 1477.0, 1482.0, 1474.0, 1903.0, 2566.0, 2634.7, 2860.5, 2932.3, 3029.3], "oriente": [363.0, 315.0, 392.0, 569.0, 464.0, 392.0, 644.0, 601.0, 527.0, 772.0, 793.0, 851.0, 967.7, 1036.0, 1099.4]}, "COMM": {"lima": [15985.0, 18347.0, 16881.0, 17993.0, 13823.0, 15572.0, 15061.0, 17629.0, 15105.0, 17838.0, 22393.0, 26871.9, 29407.2, 31596.4, 33797.5], "norte": [2180.0, 2453.0, 2412.0, 2569.0, 2177.0, 3438.0, 3182.0, 3238.0, 3008.0, 3669.0, 4552.0, 4921.2, 5679.4, 6331.4, 7065.1], "sur": [3801.0, 4405.0, 4402.0, 4619.0, 3237.0, 4983.0, 5479.0, 5965.0, 6367.0, 8151.0, 10925.0, 11045.2, 13187.6, 15329.7, 17821.9], "centro": [1352.0, 1474.0, 1320.0, 1571.0, 913.0, 979.0, 1148.0, 1619.0, 1417.0, 1867.0, 2616.0, 2605.0, 2728.4, 2801.2, 2929.3], "oriente": [334.0, 311.0, 338.0, 340.0, 193.0, 156.0, 233.0, 222.0, 198.0, 340.0, 412.0, 421.4, 455.6, 481.8, 510.9]}, "CAM": {"lima": [null, 8210.0, 8606.0, 8429.0, 7536.0, 9899.0, 9826.0, 9996.0, 10859.0, 14293.0, 20021.0, 15912.4, 19231.1, 18046.9, 17972.8], "norte": [null, 1862.0, 1803.0, 1648.0, 1492.0, 2770.0, 2527.0, 2205.0, 1649.0, 2488.0, 3065.0, 2190.4, 2647.8, 3587.7, 3589.6], "sur": [null, 1859.0, 1833.0, 1790.0, 1272.0, 2226.0, 2379.0, 2277.0, 2276.0, 3258.0, 4311.0, 3576.3, 4751.0, 4310.5, 4386.8], "centro": [null, 427.0, 290.0, 356.0, 358.0, 484.0, 481.0, 486.0, 403.0, 505.0, 877.0, 726.5, 907.7, 851.5, 849.0], "oriente": [null, 147.0, 133.0, 123.0, 107.0, 224.0, 98.0, 131.0, 121.0, 262.0, 213.0, 218.7, 267.3, 250.0, 248.4]}}, "fitted": {"LIG": [126825.4, 117312.9, 123651.0, 108919.7, 75094.3, 99680.8, 104985.9, 98215.7, 116761.8, 123326.6, 153399.6, null, null, null, null], "PU": [12738.5, 13511.0, 15032.9, 15783.7, 16867.8, 24473.4, 23567.3, 24721.9, 28720.9, 28825.6, 39682.1, null, null, null, null], "COM": [23728.2, 23906.3, 28881.8, 27022.0, 21174.3, 25931.1, 26352.0, 23933.4, 29821.5, 28581.1, 36085.4, null, null, null, null], "CAM": [11768.7, 12015.1, 13118.3, 12937.6, 14723.9, 14125.4, 14497.2, 14412.4, 16276.3, 21227.0, 26217.9, 22624.2, 27804.9, 27046.6, 27046.6]}, "lasso": {"LIG": [0.4692, 0.8229, -0.2495], "PU": [0.4391, 0.4888], "COM": [0.5305, -0.3321]}, "cam_fit": {"r2": 0.8186940467722877, "r2a": 0.7768542114120465, "ee": 0.1083955737486632, "fp": 4.219659588724276e-05, "dw": 2.048474783487097, "jb": 1.1014826066036e-05, "bp": 0.9238823704061826, "mape": 6.846010074204416, "rmse": 1364.887, "emax": 36.67394508283199, "yemax": 2020, "n": 17, "coef": [["Intercepto", 6.087568058173569, 0.5495987061167411, 11.07638717198963, 5.427737439946273e-08], ["ln(precio del oro)", 0.6082189777252142, 0.07965985047572927, 7.635201096825133, 3.713411305081718e-06], ["ln(tipo de cambio)", -0.8236823491583193, 0.2366689705985877, -3.480314073598437, 0.004064653894835879], ["ATSM El Niño 1+2 (1.er trim.)", -0.0452682798290307, 0.0423019663991994, -1.070122353222035, 0.3040312063704973]]}, "camin": {"anios": [2025, 2026, 2027, 2028, 2029, 2030], "oro": [3412.4575, 4532.7727, 4750, 4500, 4300, 4300], "tc": [3.5675225, 3.3878268, 3.3006333, 3.25, 3.25, 3.25], "atsm": [0.55, 0.64, 5, 0, 0, 0]}};
+const fmt=(x,d=1)=>x==null||x===""||isNaN(x)?"":(x<0?"−":"")+Math.abs(x).toFixed(d).replace(".",",");
+const fmtS=(x,d=1)=>x==null||isNaN(x)?"":(x>0?"+":x<0?"−":"")+Math.abs(x).toFixed(d).replace(".",",");
+const fmtU=x=>x==null?"":Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g," ");
+const pct=x=>x==null?"":fmtS(x*100,1)+" %";
+const K=v=>fmt(v/1000,1);
+const YR=D.anios, IDX=y=>YR.indexOf(y), I26=IDX(2026);
+const sig=p=>p<0.05?"***":p<0.1?"*":"";
+const cagr=(a,b,n=4)=>(Math.pow(b/a,1/n)-1)*100;
+const C={navy:"var(--navy)",blue:"var(--blue)",sky:"var(--sky)",teal:"var(--teal)",gold:"var(--gold)",red:"var(--red)",grey:"var(--grey)"};
+
+/* ---------- pipeline ---------- */
+const steps=[
+ ["s","Datos y ancla","AAP-SUNARP y macro DataSAE; 2026 = ene-set × 12/9 = 257,5 mil"],
+ ["s","Selección: LASSO","Diagnóstico con LassoCV de 4 bloques; modelo final por criterio económico"],
+ ["q","Volumen por categoría","MCO en Δln anual, 2011-2026: Ligeros, Pick Up y Commercial"],
+ ["q","Reparto SUV / autos","Logit fraccional con el ratio de precio FOB, anclado a 2026"],
+ ["a","Camiones +3 t","MCO en logaritmos: oro, tipo de cambio y El Niño"],
+ ["a","Autos de lujo","ECM con hogares AB y confianza para invertir"],
+ ["a","Reparto por zona","Panel ECM, 5 zonas, reconciliado al nacional"],
+ ["e","Bandas y escenarios","±1 error estándar; 400/450/500 mil con un escalar λ"]];
+document.getElementById("pipe").innerHTML=steps.map((s,i)=>`<div class="step ${s[0]}"><span class="n">${String(i).padStart(2,"0")}</span><b>${s[1]}</b><span>${s[2]}</span></div>`).join("");
+
+/* ---------- utilidades ---------- */
+function segs(id,items,cur,cb){const el=document.getElementById(id);
+ el.innerHTML=items.map(([k,n])=>`<button class="seg" data-k="${k}" aria-pressed="${String(k)===String(cur)}">${n}</button>`).join("");
+ el.onclick=e=>{const b=e.target.closest(".seg");if(!b)return;el.querySelectorAll(".seg").forEach(x=>x.setAttribute("aria-pressed",x===b));cb(b.dataset.k)}}
+const niceStep=x=>{const p=Math.pow(10,Math.floor(Math.log10(x))),f=x/p;return(f<=1?1:f<=2?2:f<=5?5:10)*p};
+const W=860,L=46,R=14;
+function svgLines(o){ // o:{x,series:[{v,c,dash,dots}],split,fy,hv,H}
+ const H=o.H||300,T=14,B=28,n=o.x.length;
+ const all=o.series.flatMap(s=>s.v).filter(v=>v!=null);let hi=Math.max(...all),lo=o.zero===false?Math.min(...all):0;
+ const st=niceStep((hi-lo)/5);hi=Math.ceil(hi/st)*st;if(o.zero===false)lo=Math.floor(lo/st)*st;
+ const y=v=>T+(hi-v)/(hi-lo)*(H-T-B),x=i=>L+(W-L-R)*i/(n-1);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria||"Gráfico"}">`;
+ for(let v=lo;v<=hi+1e-9;v+=st)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" ${v===0?'stroke-width="1.5"':'stroke-dasharray="2 3"'}/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${o.fy(v)}</text>`;
+ if(o.split!=null){const x0=x(o.split);s+=`<rect x="${x0}" y="${T}" width="${W-R-x0}" height="${H-T-B}" fill="var(--accent-soft)" opacity=".6"/><text x="${x0+6}" y="${T+12}" style="font-size:10.5px">proyección</text>`}
+ o.x.forEach((v,i)=>{if(i%2===0||i===n-1)s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${v}</text>`});
+ if(o.hv!=null)s+=`<line x1="${x(o.hv)}" x2="${x(o.hv)}" y1="${T}" y2="${H-B}" stroke="var(--fg)" stroke-width="1" opacity=".5"/>`;
+ o.series.forEach(se=>{const pts=se.v.map((v,i)=>v==null?null:[x(i),y(v)]).filter(Boolean);
+  s+=`<polyline points="${pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="${se.c}" stroke-width="${se.w||2.2}" ${se.dash?`stroke-dasharray="${se.dash}"`:""}/>`;
+  if(se.dots!==false)s+=pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.8" fill="${se.c}"/>`).join("");
+  if(o.hv!=null&&se.v[o.hv]!=null)s+=`<circle cx="${x(o.hv)}" cy="${y(se.v[o.hv])}" r="5" fill="${se.c}" stroke="var(--surface)" stroke-width="2"/>`});
+ return s+"</svg>"}
+function lineChart(id,mk){const el=document.getElementById(id),ro=document.getElementById(id+"-ro");let hv=null;
+ const draw=()=>{const r=mk(hv);el.innerHTML=svgLines(Object.assign({hv},r.o));ro.innerHTML=r.ro};
+ el.onmousemove=e=>{const sv=el.querySelector("svg");if(!sv)return;const b=sv.getBoundingClientRect(),n=YR.length;
+  const i=Math.max(0,Math.min(n-1,Math.round(((e.clientX-b.left)/b.width*W-L)/(W-L-R)*(n-1))));if(i!==hv){hv=i;draw()}};
+ el.onmouseleave=()=>{hv=null;draw()};draw()}
+const roH=(hv,items,tail)=>`<span class="y">${hv==null?"Pasa el cursor por el gráfico":YR[hv]}</span>`+(hv==null?"":items.map(([t,c,v])=>`<span><i class="sw" style="background:${c}"></i>${t}: <b>${v}</b></span>`).join(""))+(tail||"");
+function svgBars(cats,series,fy,H=260){ // barras agrupadas con negativos
+ const T=14,B=44,all=series.flatMap(s=>s.v).concat([0]);let hi=Math.max(...all),lo=Math.min(...all);const st=niceStep((hi-lo)/5);hi=Math.ceil(hi/st-1e-9)*st;lo=Math.floor(lo/st+1e-9)*st;
+ const y=v=>T+(hi-v)/(hi-lo)*(H-T-B),g=(W-L-R)/cats.length,bw=Math.min(54,g*0.7/series.length);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Coeficientes MCO y LASSO">`;
+ for(let v=lo;v<=hi+1e-9;v+=st)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" ${Math.abs(v)<1e-9?'stroke-width="1.5"':'stroke-dasharray="2 3"'}/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${fy(v)}</text>`;
+ cats.forEach((c,i)=>{const cx=L+g*i+g/2;s+=`<text x="${cx}" y="${H-22}" text-anchor="middle">${c}</text>`;
+  series.forEach((se,k)=>{const v=se.v[i],bx=cx-bw*series.length/2+k*bw,y0=y(Math.max(v,0)),h=Math.max(Math.abs(y(v)-y(0)),v===0?0:1);
+   s+=`<rect x="${bx}" y="${y0}" width="${bw-3}" height="${h}" fill="${se.c}"/><text x="${bx+bw/2-1.5}" y="${(v>=0?y0-4:y0+h+11)}" text-anchor="middle" style="fill:var(--fg)">${v===0&&k===1?"0":fy(v)}</text>`})});
+ return s+"</svg>"}
+function svgStack(cats,series,fy,split,H=300){ // series:[{v,c,tx}] columnas apiladas
+ const T=14,B=28,tot=cats.map((_,i)=>series.reduce((a,s)=>a+s.v[i],0));let hi=Math.max(...tot);const st=niceStep(hi/5);hi=Math.ceil(hi/st)*st;
+ const y=v=>T+(hi-v)/hi*(H-T-B),g=(W-L-R)/cats.length,bw=g*0.62;let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Columnas apiladas">`;
+ for(let v=0;v<=hi+1e-9;v+=st)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" ${v===0?'stroke-width="1.5"':'stroke-dasharray="2 3"'}/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${fy(v)}</text>`;
+ if(split!=null)s+=`<rect x="${L+g*split}" y="${T}" width="${W-R-L-g*split}" height="${H-T-B}" fill="var(--accent-soft)" opacity=".6"/>`;
+ cats.forEach((c,i)=>{const cx=L+g*i+g/2;let a=0;series.forEach(se=>{const v=se.v[i],h=y(a)-y(a+v);s+=`<rect x="${cx-bw/2}" y="${y(a+v)}" width="${bw}" height="${h}" fill="${se.c}"/>`;if(h>15)s+=`<text x="${cx}" y="${y(a+v)+h/2+4}" text-anchor="middle" style="fill:${se.tx||"#fff"};font-size:10.5px">${fy(v)}</text>`;a+=v});
+  s+=`<text x="${cx}" y="${y(tot[i])-5}" text-anchor="middle" style="fill:var(--fg);font-weight:500">${fy(tot[i])}</text><text x="${cx}" y="${H-8}" text-anchor="middle">${c}</text>`});
+ return s+"</svg>"}
+const lgd=items=>items.map(([t,c,d])=>`<span><i class="sw" style="background:${c};${d?"height:3px;vertical-align:3px":""}"></i>${t}</span>`).join("");
+
+/* ---------- definición de segmentos ---------- */
+const V=D.var, vi=y=>V.anios.indexOf(y);
+const SEG={
+ LIG:{name:"Ligeros (SUV + Passengers)",kind:"dln",y:D.LIG,f:D.fitted.LIG,ck:"Ligeros",fk:"LIG",dep:"Δln Ligeros",c:C.navy,
+  vars:[{n:"Δln precio del oro",k:"dlnoro",d:3,t:"cambio log. anual del oro (US$/oz)",am:[0.1,"+10 % del oro"],can:"Un oro más caro eleva el ingreso de las zonas mineras y la compra de vehículos."},
+        {n:"Consumo privado",k:"cons",d:1,t:"var. % real",am:[1,"+1 pp de consumo privado"],can:"Más consumo de los hogares se traduce en más compras de autos y SUV."},
+        {n:"ln(IPC veh.) / ln(IPC)",k:"rip",d:3,t:"precio relativo de los vehículos",am:[0.01,"+0,01 en el precio relativo"],can:"Si los vehículos suben más que el IPC, se encarecen relativamente y baja la demanda."}],
+  head:"Ligeros crece con el oro y el consumo privado, y lo frena el precio relativo de los vehículos. SUV y Passengers se modelan juntos para no explicar por separado un cambio de preferencia que es sobre todo de precios relativos."},
+ PU:{name:"Pick Up",kind:"dln",y:D.PICKUP,f:D.fitted.PU,ck:"PICK UP",fk:"PU",dep:"Δln Pick Up",c:C.teal,
+  vars:[{n:"Inversión privada",k:"invp",d:1,t:"var. % real",am:[1,"+1 pp de inversión privada"],can:"Más inversión privada demanda flota de trabajo para obras, minería y logística."},
+        {n:"Precios de exportación",k:"px",d:1,t:"var. %",am:[1,"+1 pp en precios de exportación"],can:"Mejores precios de exportación elevan los ingresos de los sectores que renuevan flota."}],
+  head:"Pick Up responde a la inversión privada y a los precios de exportación."},
+ COM:{name:"Commercial",kind:"dln",y:D.COMM,f:D.fitted.COM,ck:"COMMERCIAL",fk:"COM",dep:"Δln Commercial",c:C.gold,
+  vars:[{n:"Inversión total",k:"invt",d:1,t:"var. % real",am:[1,"+1 pp de inversión total"],can:"La inversión total activa el transporte liviano de carga y servicios."},
+        {n:"Mora de consumo",k:"mora",d:2,t:"puntos, fin de período",am:[1,"+1 punto de mora"],can:"Más morosidad endurece el crédito y frena la compra de vehículos comerciales."}],
+  head:"Commercial es el ajuste más débil (R² 0,57): la inversión total es significativa y la mora de consumo no llega al 10 %."},
+ CAM:{name:"Camiones +3 t",kind:"lvl",y:D.CAM,f:D.fitted.CAM,dep:"ln Camiones",c:C.navy,
+  vars:[{n:"ln precio del oro",k:"oro",d:0,ln:true,t:"logaritmo (US$/oz)",am:[0.1,"+10 % del oro"],can:"Un oro alto eleva la riqueza minera (incluida la informal) y el movimiento de carga."},
+        {n:"ln tipo de cambio",k:"tc",d:3,ln:true,t:"logaritmo (S/ por US$)",am:[0.1,"+10 % del tipo de cambio"],can:"Un sol más débil encarece camiones y repuestos importados y enfría la demanda."},
+        {n:"ATSM Niño 1+2 (1.er trim.)",k:"atsm",d:1,t:"anomalía en °C (nivel)",am:[1,"+1 °C de ATSM"],can:"Un Niño fuerte en verano paraliza obras y transporte en el norte y posterga la renovación de flota."}],
+  head:"Camiones +3 t: el oro y el tipo de cambio explican el nivel; El Niño de 2027 produce la caída, pero no es significativo (p = 0,30) y se presenta como supuesto de escenario."}
+};
+SEG.CAM.coef=D.cam_fit.coef.map(r=>[r[0],r[1],r[3],r[4],r[2]]);
+for(const k of ["LIG","PU","COM"])SEG[k].coef=D.coef[SEG[k].ck];
+const KEYS=["LIG","PU","COM","SPL","CAM","LUJ","ZON"];
+const TABN={LIG:"Ligeros",PU:"Pick Up",COM:"Commercial",SPL:"Reparto SUV / autos",CAM:"Camiones +3 t",LUJ:"Autos de lujo",ZON:"Reparto por zona"};
+
+function ixTables(k){
+ const cam=k==="CAM",f=cam?D.cam_fit:D.fit[SEG[k].fk],p=(v,d=3)=>fmt(v,d);
+ const st=(ok,na)=>na?"na":ok?"ok":"warn";
+ const A=[["R²",p(f.r2,2),"ok","variación explicada"],["R² ajustado",p(f.r2a,2),"ok","descuenta el nº de variables"],
+  ["MAPE",p(f.mape,1)+" %",st(f.mape<10),"error medio del nivel"],[cam?"RMSE (unidades)":"RMSE (%)",cam?fmtU(f.rmse):p(f.rmse,1)+" %","na","error cuadrático"],
+  ["Error máximo",p(Math.abs(f.emax),1)+" % ("+f.yemax+")",st(Math.abs(f.emax)<20),cam?"choque de 2020":"peor año"]];
+ const okDW=f.dw>=1.5&&f.dw<=2.5;
+ const B=[["Durbin-Watson",p(f.dw,2),st(okDW),okDW?"sin autocorrelación":"autocorrelación en residuos"],
+  ["Jarque-Bera (p)",f.jb<0.001?"<0,001":p(f.jb,3),st(f.jb>0.05),f.jb>0.05?"residuos normales":"residuos no normales"],
+  ["Breusch-Pagan (p)",p(f.bp,3),st(f.bp>0.05),f.bp>0.05?"varianza constante":"heterocedasticidad"],
+  ["F global (p)",f.fp<0.001?"<0,001":p(f.fp,3),st(f.fp<0.05),"variables conjuntamente"],
+  cam?["Observaciones",String(f.n),"na","2010-2026 (2010-14 imputado)"]:["VIF máx. / ADF (p)",p(f.vif,2)+" / "+p(f.adf,3),st(f.vif<5&&f.adf<0.05),f.adf<0.05?"sin colinealidad; estacionaria":"ADF no rechaza raíz unitaria"]];
+ const tb=rows=>`<div class="scroll"><table class="num"><tbody>${rows.map(r=>`<tr><td class="l"><i class="st ${r[2]}"></i>${r[0]}</td><td><b>${r[1]}</b></td><td class="l note">${r[3]}</td></tr>`).join("")}</tbody></table></div>`;
+ return `<div class="two">${tb(A)}${tb(B)}</div>`}
+
+function fitBlock(k){
+ const S=SEG[k],co=S.coef,lvl=S.kind==="lvl",fx=v=>fmt(Math.abs(v),Math.abs(v)<0.1?4:3);
+ const eqG=`${S.dep}<sub>t</sub> = β₀ + `+S.vars.map((v,i)=>`β${"₁₂₃"[i]}·${v.n}<sub>t</sub>`).join(" + ")+` + ε<sub>t</sub>`;
+ const eqE=`${S.dep} = <span class="b">${fmt(co[0][1],3)}</span>`+S.vars.map((v,i)=>` ${co[i+1][1]<0?"−":"+"} <span class="b">${fx(co[i+1][1])}</span>·${v.n}`).join("");
+ const eqY=lvl?"Yₜ = exp(ln Yₜ)":"Yₜ = Yₜ₋₁ · exp(Δln Yₜ)";
+ const effect=(b,am)=>{const e=b*am[0]*100;return `${am[1]} → <b class="${e>0?"pos":"neg"}">${fmtS(e,1)} %</b>`};
+ const rows=`<tr><td class="l">Constante</td><td class="l"></td><td class="mono">${fmt(co[0][1],3)} (${fmt(co[0][4],3)})</td><td>${fmt(co[0][2],2)}</td><td>${fmt(co[0][3],3)} ${sig(co[0][3])}</td><td class="l"></td><td class="cn"></td></tr>`+
+  S.vars.map((v,i)=>{const r=co[i+1];return `<tr class="${r[3]<0.1?"hl":""}"><td class="l">${v.n}</td><td class="l">${v.t}</td><td class="mono">${fmt(r[1],3)} (${fmt(r[4],3)})</td><td>${fmt(r[2],2)}</td><td>${fmt(r[3],3)} ${sig(r[3])}</td><td class="l">${effect(r[1],v.am)}</td><td class="cn">${v.can}</td></tr>`}).join("");
+ return `<div class="block">
+  <div class="block-h"><h3>${S.name} · modelo</h3><span class="tag ${lvl?"a":"q"}">${lvl?"MCO en niveles log. · 2010-2026":"MCO en Δln · 2011-2026 (n = 16)"}</span></div>
+  <p>${S.head}</p>
+  <div class="eq">${eqG}<br>${eqE}<br><span class="cm">${eqY}</span></div>
+  <div class="scroll"><table class="num"><thead><tr><th class="l">Variable</th><th class="l">Transformación</th><th>β (e.e.)</th><th>t</th><th>p</th><th class="l">Efecto en unidades (aprox.)</th><th class="l">Canal de transmisión</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="note">Sombreado: significativa al 10 %. *** p &lt; 0,05; * p &lt; 0,10. El efecto es el cambio aproximado de las unidades por el cambio indicado en la variable.</p>
+  <h3 style="font-size:16px;margin-top:4px">Observado vs. ajustado</h3>
+  <div class="legend">${lgd([[S.name+" (observado y proyección)",S.c],["Ajustado por el modelo",C.grey,1]])}</div>
+  <div class="chart" id="c${k}"></div><div class="ro" id="c${k}-ro"></div>
+  <p class="note">Miles de unidades. El ajuste usa el nivel observado del año anterior y el Δln estimado; desde 2027 la línea es la proyección. 2026 = ene-set × 12/9.</p>
+ </div>
+ <div class="block">
+  <div class="block-h"><h3>Indicadores del modelo</h3><span class="tag q">Validación</span></div>
+  <p class="note">Verde: pasa la prueba (al 5 %, o el criterio indicado); ámbar: advertencia.</p>
+  ${ixTables(k)}
+ </div>`}
+
+function chainBlock(k){
+ const S=SEG[k],co=S.coef,lvl=S.kind==="lvl";
+ const ys=lvl?[2026,2027,2028,2029,2030]:[2027,2028,2029,2030];
+ const xv=(v,y)=>lvl?(D.camin[v.k][D.camin.anios.indexOf(y)]):V[v.k][vi(y)];
+ const xe=(v,y)=>v.ln?Math.log(xv(v,y)):xv(v,y);
+ const inp=S.vars.map(v=>`<tr><td class="l">${v.n.replace(/^ln /,"")}</td>${ys.map(y=>`<td>${fmt(xv(v,y),v.d)}</td>`).join("")}</tr>`).join("");
+ const lnY=y=>co[0][1]+S.vars.reduce((a,v,i)=>a+co[i+1][1]*xe(v,y),0);
+ let Y=lvl?null:S.y[I26],prev=S.y[I26];const calc=[];
+ ys.forEach(y=>{const d=lnY(y);let u;if(lvl)u=Math.exp(d);else{Y=Y*Math.exp(d);u=Y}calc.push({y,d,u,g:u/prev-1});prev=u});
+ const contr=S.vars.map((v,i)=>`<tr><td class="l">${v.n}</td><td class="mono">${fmt(co[i+1][1],3)}</td>${ys.map(y=>{const a=co[i+1][1]*xe(v,y)*(lvl?1:100);return `<td class="${!lvl&&a>0.05?"pos":!lvl&&a<-0.05?"neg":""}">${lvl?fmtS(a,2):fmtS(a,1)}</td>`}).join("")}</tr>`).join("")+
+  `<tr><td class="l">Constante</td><td class="mono">${fmt(co[0][1],3)}</td>${ys.map(()=>`<td>${lvl?fmtS(co[0][1],2):fmtS(co[0][1]*100,1)}</td>`).join("")}</tr>`+
+  `<tr class="hl"><td class="l"><b>${lvl?"ln(camiones) del modelo":"Δln del modelo (pp)"}</b></td><td></td>${calc.map(c=>`<td><b>${lvl?fmt(c.d,3):fmtS(c.d*100,1)}</b></td>`).join("")}</tr>`+
+  `<tr><td class="l">Variación anual</td><td></td>${calc.map(c=>`<td>${pct(c.g)}</td>`).join("")}</tr>`+
+  `<tr class="anc"><td class="l"><b>Unidades</b></td><td></td>${calc.map(c=>`<td><b>${fmtU(c.u)}</b></td>`).join("")}</tr>`;
+ const u0=S.y[I26],u30=calc[calc.length-1].u;
+ const txt=lvl?`ln(camiones) = ${fmt(co[0][1],3)} + ${fmt(co[1][1],3)}·ln(oro) ${co[2][1]<0?"−":"+"} ${fmt(Math.abs(co[2][1]),3)}·ln(TC) ${co[3][1]<0?"−":"+"} ${fmt(Math.abs(co[3][1]),3)}·ATSM; unidades = exp(ln). 2026 observado (ene-set × 12/9) = <span class="r">${fmtU(D.CAM[I26])}</span>.`:
+  `Se parte de 2026 = <span class="r">${fmtU(u0)}</span> u. (ene-set × 12/9) y cada año se aplica Yₜ = Yₜ₋₁·exp(Δln). 2030 = <span class="r">${fmtU(u30)}</span> u.; CAGR 2026-30 = <span class="r">${fmt(cagr(u0,u30),1)} %</span>.`;
+ return `<div class="block">
+  <div class="block-h"><h3>De los insumos a las unidades 2027-2030</h3><span class="tag q">${lvl?"Nivel logarítmico":"Cadena de Δln"}</span></div>
+  <p>Insumos de la senda proyectada (escenario optimista) y aporte de cada uno al ${lvl?"nivel":"crecimiento"}.</p>
+  <div class="scroll"><table class="num"><thead><tr><th class="l">Insumo</th>${ys.map(y=>`<th>${y}${y===2026?" (a)":""}</th>`).join("")}</tr></thead><tbody>${inp}</tbody></table></div>
+  <div class="scroll"><table class="num"><thead><tr><th class="l">${lvl?"Aporte β·x (en ln)":"Aporte β·x (pp de Δln)"}</th><th>β</th>${ys.map(y=>`<th>${y}</th>`).join("")}</tr></thead><tbody>${contr}</tbody></table></div>
+  <div class="calc">${txt}</div>
+  ${lvl?`<p class="note">El Niño sale de la serie trimestral 2026-T4 a 2027-T4 (2027-T1 = 5 °C); 2028-2030 = 0 por indicación. Resultado: 2027 = 22,6 mil (−20,6 %), 2028 = 27,8 mil, 2030 = 27,0 mil. Si El Niño no se materializa, el modelo da más camiones en 2027. Serie 2010-2014 imputada; camión + tracto, sin ómnibus.</p>`:
+   `<p class="note">${k==="COM"?"Advertencias: la serie no rechaza raíz unitaria (ADF p = 0,999) y el Durbin-Watson es 2,54; la mora de consumo no es significativa al 10 % (p = 0,14).":k==="PU"?"Durbin-Watson fuera del rango 1,5-2,5; ambas variables son significativas al 5 %.":"Las tres variables son significativas al 10 %; el R² ajustado es 0,76."}</p>`}
+ </div>`}
+
+function splBlock(){
+ const a=D.logit.a,b=D.logit.b,p26=D.part[I26],r26=D.ratio[I26],dl=Math.log(p26/(1-p26))-(a+b*r26);
+ const ys=[2026,2027,2028,2029,2030];
+ const rows=ys.map(y=>{const i=IDX(y),lg=a+b*D.ratio[i]+dl;return `<tr class="${y===2026?"anc hl":""}"><td>${y}${y===2026?" (ancla)":""}</td><td>${fmt(D.ratio[i],3)}</td><td>${fmt(lg,3)}</td><td><b>${fmt(D.part[i]*100,1)} %</b></td><td>${fmtU(D.SUV[i])}</td><td>${fmtU(D.AUTOS[i])}</td><td>${fmtU(D.LIG[i])}</td></tr>`}).join("");
+ return `<div class="block">
+  <div class="block-h"><h3>Reparto de Ligeros entre SUV y automóviles</h3><span class="tag q">Logit fraccional · anclado a 2026</span></div>
+  <p>El total de Ligeros sale del modelo de volumen; aquí solo se reparte. La participación del SUV depende del ratio de precio FOB SUV/automóviles: si el SUV se abarata frente al auto, gana espacio.</p>
+  <div class="eq">logit(p<sub>t</sub>) = a + b·ratio<sub>t</sub> + δ ; p<sub>t</sub> = 1 / (1 + exp(−logit<sub>t</sub>))<br>logit(p) = <span class="b">${fmt(a,2)}</span> ${b<0?"−":"+"} <span class="b">${fmt(Math.abs(b),2)}</span>·ratio + δ  <span class="cm">(t de b = ${fmt(D.logit.tb,1)}; δ = ${fmt(dl,2)} ancla el modelo a p<sub>2026</sub> = ${fmt(p26*100,1)} %)</span><br>SUV<sub>t</sub> = p<sub>t</sub>·Ligeros<sub>t</sub> ; Passengers<sub>t</sub> = (1 − p<sub>t</sub>)·Ligeros<sub>t</sub></div>
+  <div class="scroll"><table class="num"><thead><tr><th>Año</th><th>Ratio SUV/autos</th><th>logit</th><th>SUV en Ligeros</th><th>SUV</th><th>Passengers</th><th>Ligeros</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="note">Supuesto clave: el ratio cae ${fmt(-D.sim.r*100,2)} % al año (tasa 2016-2026; escenario 2 de Gildemeister). Sin el anclaje δ, la participación caería de 80 % a 64 % en 2027. El SUV llega a ${fmt(D.part[IDX(2030)]*100,1)} % de Ligeros en 2030.</p>
+  <h3 style="font-size:16px;margin-top:4px">Participación del SUV en Ligeros</h3>
+  <div class="chart" id="cSPL"></div><div class="ro" id="cSPL-ro"></div>
+ </div>`}
+
+function lujBlock(){
+ const rows=[["Δ hogares AB","+0,065","más hogares de altos ingresos"],["Confianza para invertir","+0,0047","↑ confianza, más ventas"],["ln(lujo) rezagado","−0,241","corrección hacia el equilibrio"],["Tasa de interés","n.s.","se probó y no entra"]];
+ const ys=[2026,2027,2028,2029,2030];
+ const tr=ys.map(y=>{const i=IDX(y);return `<tr><td>${y}${y===2026?" (a)":""}</td><td><b>${fmtU(D.LUJ[i])}</b></td><td>${D.LUJ_lo[i]==null?"":fmtU(D.LUJ_lo[i])}</td><td>${D.LUJ_hi[i]==null?"":fmtU(D.LUJ_hi[i])}</td><td>${i?pct(D.LUJ[i]/D.LUJ[i-1]-1):""}</td></tr>`}).join("");
+ return `<div class="block">
+  <div class="block-h"><h3>Autos de lujo · modelo de corrección de error</h3><span class="tag a">ECM en Δln · R² 0,85</span></div>
+  <p>Autos de lujo: más hogares AB y más confianza para invertir llevan las ventas a ${K(D.LUJ[IDX(2030)])} mil en 2030. La serie se rehízo desde la data AAP por marca premium (~10 % mayor que la del panel maestro).</p>
+  <div class="eq">Δln(lujo)<sub>t</sub> = c + <span class="b">0,065</span>·Δhogares AB<sub>t</sub> + <span class="b">0,0047</span>·confianza<sub>t</sub> − <span class="b">0,241</span>·ln(lujo)<sub>t−1</sub></div>
+  <div class="scroll"><table class="num"><thead><tr><th class="l">Variable</th><th>β</th><th class="l">Lectura</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="l">${r[0]}</td><td class="mono">${r[1]}</td><td class="l note">${r[2]}</td></tr>`).join("")}</tbody></table></div>
+  <div class="scroll"><table class="num"><thead><tr><th>Año</th><th>Unidades</th><th>IC inferior (−1 e.e.)</th><th>IC superior (+1 e.e.)</th><th>Var. anual</th></tr></thead><tbody>${tr}</tbody></table></div>
+  <p class="note">La corrección de error evita que la senda de confianza (47 puntos) implique ~25 % anual. CAGR 2026-2030: ${fmt(cagr(D.LUJ[I26],D.LUJ[IDX(2030)]),1)} %. 2026 = ene-set × 12/9 (5,1 mil).</p>
+  <div class="legend">${lgd([["Autos de lujo",C.teal],["IC ±1 e.e.",C.red,1]])}</div>
+  <div class="chart" id="cLUJ"></div><div class="ro" id="cLUJ-ro"></div>
+ </div>`}
+
+const ZN={lima:"Lima",sur:"Sur",norte:"Norte",centro:"Centro",oriente:"Oriente"},ZC={lima:C.navy,sur:C.sky,norte:C.teal,centro:C.grey,oriente:C.gold};
+const ZTX={sur:"var(--fg)",centro:"var(--fg)"};
+const SG5={TOT:"Total livianos",SUV:"SUV",AUTOS:"Passengers",PICKUP:"Pick Up",COMM:"Commercial",CAM:"Camiones +3 t"};
+const SP5={TOT:"Livianos = suma de los cuatro segmentos; cada uno con su panel y sub-paneles por zona.",SUV:"SUV, corto plazo: oro (t−1) y El Niño cálido (t−1) en Norte; cobre en Sur.",AUTOS:"Passengers: tendencia lineal común en el largo plazo.",PICKUP:"Pick Up, corto plazo: oro (t−1) y El Niño promedio (t−1) en Norte; cobre en Sur.",COMM:"Commercial, largo plazo: PBI manufactura no primaria (Norte) y manufactura (Sur).",CAM:"Camiones, corto plazo: manufactura no primaria × Norte, manufactura × Sur y El Niño cálido (t−1) × Norte."};
+let seg5="TOT",yr5=2030;
+function zonBlock(){
+ return `<div class="block">
+  <div class="block-h"><h3>Reparto por zona · panel ECM con efectos fijos</h3><span class="tag a">5 zonas · reconciliado al nacional</span></div>
+  <p>Panel ECM de Engle-Granger por segmento: el largo plazo usa la masa salarial de cada zona; el corto plazo suma oro, cobre, manufactura y El Niño donde corresponde. Cada año 2027-2030, las unidades de la zona = participación del modelo × total nacional del paso anterior: zonas y nacional siempre cuadran.</p>
+  <div class="eq">ln U(z,t) = a(z) + b·ln masa salarial(z,t) <span class="cm">(largo plazo)</span><br>ΔU(z,t) = α·[error de largo plazo]<sub>t−1</sub> + γ·Δx(z,t) + ε <span class="cm">(corto plazo)</span><br><span id="fx5" class="cm"></span></div>
+  <div class="block-h"><div class="segs" id="s5"></div><div class="segs" id="y5"></div></div>
+  <div class="legend">${lgd(Object.keys(ZN).map(z=>[ZN[z],ZC[z]]))}</div>
+  <div class="chart" id="c5"></div>
+  <div class="scroll"><table class="num" id="tb5"></table></div>
+  <p class="note" id="n5"></p>
+  <p class="note">Error de reparto a 1, 2 y 3 años: 2,5, 3,9 y 5,0 pp en livianos; 3,6, 4,0 y 4,3 pp en camiones. Miles de unidades en el gráfico.</p>
+ </div>`}
+function r5(){
+ const R=D.reg[seg5],zs=Object.keys(ZN),cats=[];for(let y=2022;y<=2030;y++)cats.push(String(y));
+ const val=(z,y)=>R[z][IDX(y)]||0,totY=y=>zs.reduce((a,z)=>a+val(z,y),0);
+ document.getElementById("c5").innerHTML=svgStack(cats,zs.map(z=>({v:cats.map(y=>val(z,+y)/1000),c:ZC[z],tx:ZTX[z]})),v=>fmt(v,1),cats.indexOf("2027"));
+ const t=totY(yr5),t26=totY(2026);
+ document.getElementById("tb5").innerHTML=`<thead><tr><th>Zona</th><th>Unidades ${yr5}</th><th>% nacional</th><th>Δ vs. 2026</th></tr></thead><tbody>`+
+  zs.map(z=>{const s=val(z,yr5)/t*100,s26=val(z,2026)/t26*100,d=s-s26;return `<tr><td><i class="sw" style="background:${ZC[z]}"></i>${ZN[z]}</td><td>${fmtU(val(z,yr5))}</td><td>${fmt(s,1)} %</td><td class="${d>0.05?"pos":d<-0.05?"neg":""}">${yr5===2026?"–":fmtS(d,1)+" pp"}</td></tr>`}).join("")+
+  `<tr class="hl"><td><b>Nacional</b></td><td><b>${fmtU(t)}</b></td><td>100,0 %</td><td></td></tr></tbody>`;
+ document.getElementById("fx5").innerHTML=SG5[seg5]+": "+SP5[seg5];
+ document.getElementById("n5").textContent=`${SG5[seg5]}: Lima pasa de ${fmt(val("lima",2026)/t26*100,1)} % en 2026 a ${fmt(val("lima",2030)/totY(2030)*100,1)} % en 2030.`}
+
+/* ---------- pestañas ---------- */
+const tabs=document.getElementById("tabs"),pan=document.getElementById("panel");
+tabs.innerHTML=KEYS.map(k=>`<button class="tab" role="tab" id="tab-${k}" aria-selected="false">${TABN[k]}</button>`).join("");
+function wire(k){
+ if(SEG[k]&&SEG[k].kind==="dln"||k==="CAM"){const S=SEG[k];
+  lineChart("c"+k,hv=>{const o=S.y.map(x=>x/1000),f=S.f.map((x,i)=>i<=I26&&x!=null?x/1000:null);
+   const it=hv==null?[]:[[S.name,S.c,K(S.y[hv])+" mil"]].concat(f[hv]!=null?[["Ajustado",C.grey,K(S.f[hv])+" mil"],["Error",C.grey,fmtS((S.f[hv]/S.y[hv]-1)*100,1)+" %"]]:[]);
+   return {o:{x:YR,series:[{v:o,c:S.c},{v:f,c:C.grey,dash:"4 3",dots:false}],split:I26,fy:v=>fmt(v,0),aria:S.name},ro:roH(hv,it)}})}
+ if(k==="SPL")lineChart("cSPL",hv=>{const v=D.part.map(p=>p*100);return {o:{x:YR,series:[{v,c:C.navy}],split:I26,fy:v=>fmt(v,0)+"%",zero:false,aria:"Participación SUV"},ro:roH(hv,hv==null?[]:[["SUV en Ligeros",C.navy,fmt(v[hv],1)+" %"],["Ratio SUV/autos",C.grey,fmt(D.ratio[hv],3)]])}});
+ if(k==="LUJ")lineChart("cLUJ",hv=>{const m=x=>x==null?null:x/1000;return {o:{x:YR,series:[{v:D.LUJ.map(m),c:C.teal},{v:D.LUJ_lo.map(m),c:C.red,dash:"3 3",dots:false},{v:D.LUJ_hi.map(m),c:C.red,dash:"3 3",dots:false}],split:I26,fy:v=>fmt(v,1),aria:"Autos de lujo"},
+  ro:roH(hv,hv==null?[]:[["Autos de lujo",C.teal,K(D.LUJ[hv])+" mil"]].concat(D.LUJ_lo[hv]!=null?[["IC",C.red,K(D.LUJ_lo[hv])+"–"+K(D.LUJ_hi[hv])]]:[]))}});
+ if(k==="ZON"){segs("s5",Object.keys(SG5).map(z=>[z,SG5[z]]),seg5,v=>{seg5=v;r5()});segs("y5",[2025,2026,2027,2028,2029,2030].map(y=>[y,y]),yr5,v=>{yr5=+v;r5()});r5()}}
+function show(k){KEYS.forEach(j=>document.getElementById("tab-"+j).setAttribute("aria-selected",j===k));
+ pan.innerHTML=SEG[k]?fitBlock(k)+chainBlock(k):k==="SPL"?splBlock():k==="LUJ"?lujBlock():zonBlock();wire(k);try{localStorage.setItem("seg_derco",k)}catch(e){}}
+KEYS.forEach(k=>document.getElementById("tab-"+k).onclick=()=>show(k));
+let start="LIG";try{start=localStorage.getItem("seg_derco")||"LIG"}catch(e){}if(!KEYS.includes(start))start="LIG";show(start);
+
+/* ---------- LASSO ---------- */
+const LAS={LIG:{t:"Ligeros",names:["Δln oro","Consumo privado","ln(IPC veh.)/ln(IPC)"]},PU:{t:"Pick Up",names:["Inversión privada","Precios de exportación"]},COM:{t:"Commercial",names:["Inversión total","Mora de consumo"]}};
+let catL="LIG",aL=0;
+function rL(){const c=LAS[catL],ols=D.lasso[catL],soft=v=>Math.sign(v)*Math.max(Math.abs(v)-aL,0),las=ols.map(soft);
+ document.getElementById("vA").textContent=fmt(aL,2);
+ document.getElementById("cL").innerHTML=svgBars(c.names,[{v:ols,c:C.sky},{v:las,c:C.navy}],v=>fmt(v,2));
+ const alive=las.filter(v=>v!==0).length;
+ document.getElementById("rL").innerHTML=`<span class="y">α = ${fmt(aL,2)}</span><span>Sobreviven <b>${alive} de ${ols.length}</b> variables</span>`+c.names.map((n,i)=>`<span><i class="sw" style="background:${las[i]?C.navy:C.grey}"></i>${n}: <b>${las[i]?fmt(las[i],2):"0"}</b></span>`).join("")}
+segs("lsel",Object.keys(LAS).map(k=>[k,LAS[k].t]),catL,v=>{catL=v;rL()});
+document.getElementById("iA").oninput=e=>{aL=+e.target.value;rL()};rL();
+
+/* ---------- simulador ---------- */
+const SM=D.sim,LG=D.logit;
+const BASE={oro:100,cons:0,inv:0,px:0,ipcv:0,ratio:-2.48};let PAR=Object.assign({},BASE);
+function sim(par){const c=D.coef,Lg=c["Ligeros"],P=c["PICK UP"],Cm=c["COMMERCIAL"];
+ const f=par.oro/100,r=Math.abs(par.ratio-BASE.ratio)<1e-9?SM.r:par.ratio/100;
+ let YL=SM.Y26.LIG,YP=SM.Y26.PU,YC=SM.Y26.COM,Hp=SM.oro[0],Jp=SM.ipcv[0];
+ const o={LIG:[YL],PU:[YP],COM:[YC],SUV:[],AUT:[],p:[],TOT:[]};
+ const delta=Math.log(SM.p26/(1-SM.p26))-(LG.a+LG.b*SM.ratio26);
+ const push=i=>{const ratio=SM.ratio26*Math.pow(1+r,i),p=1/(1+Math.exp(-(LG.a+LG.b*ratio+delta)));o.p.push(p);o.SUV.push(p*o.LIG[i]);o.AUT.push((1-p)*o.LIG[i]);o.TOT.push(o.LIG[i]+o.PU[i]+o.COM[i])};
+ push(0);
+ for(let i=1;i<=4;i++){const H=SM.oro[i]*f,dln=Math.log(H/Hp);Hp=H;const gJ=SM.ipcv[i]/SM.ipcv[i-1]-1+par.ipcv/100;Jp=Jp*(1+gJ);const rip=Math.log(Jp)/Math.log(SM.ipc[i]);
+  YL*=Math.exp(Lg[0][1]+Lg[1][1]*dln+Lg[2][1]*(SM.cons[i]+par.cons)+Lg[3][1]*rip);
+  YP*=Math.exp(P[0][1]+P[1][1]*(SM.invp[i]+par.inv)+P[2][1]*(SM.px[i]+par.px));
+  YC*=Math.exp(Cm[0][1]+Cm[1][1]*(SM.invt[i]+par.inv)+Cm[2][1]*SM.mora[i]);
+  o.LIG.push(YL);o.PU.push(YP);o.COM.push(YC);push(i)}
+ return o}
+const SLD=[["oro","Precio del oro","% de la senda base",70,130,5,v=>v+"%"],["cons","Consumo privado","pp por año",-3,3,0.5,v=>fmtS(v,1)+" pp"],["inv","Inversión (privada y total)","pp por año",-8,8,1,v=>fmtS(v,0)+" pp"],["px","Precios de exportación","pp por año",-10,10,1,v=>fmtS(v,0)+" pp"],["ipcv","Inflación de vehículos","pp por año",-3,3,0.5,v=>fmtS(v,1)+" pp"],["ratio","Ratio SUV/automóviles","var. % anual",-5,0,0.1,v=>fmt(v,2)+"%"]];
+let tab3="seg";
+function r3(){const o=sim(PAR),b=sim(BASE),Y=[2026,2027,2028,2029,2030],i4=4,dt=(o.TOT[i4]/b.TOT[i4]-1)*100;
+ document.getElementById("k3").innerHTML=`<div class="kpi"><b>${K(o.TOT[i4])} mil</b><span>livianos 2030</span></div><div class="kpi"><b>${fmtS(dt,1)} %</b><span>vs. base (${K(b.TOT[i4])} mil)</span></div><div class="kpi"><b>${fmtS(cagr(o.TOT[0],o.TOT[i4]),1)} %</b><span>CAGR 2026-30</span></div><div class="kpi"><b>${fmt(o.p[i4]*100,1)} %</b><span>SUV en Ligeros 2030</span></div>`;
+ const el=document.getElementById("c3");
+ if(tab3==="seg"){const cats=["2024","2025",...Y.map(String)],h=k=>[D[k][IDX(2024)]/1000,D[k][IDX(2025)]/1000],v=(k,a)=>[...h(k),...a.map(x=>x/1000)];
+  document.getElementById("l3").innerHTML=lgd([["SUV",C.navy],["Automóviles",C.sky],["Pick Up",C.teal],["Commercial",C.gold]]);
+  el.innerHTML=svgStack(cats,[{v:v("SUV",o.SUV),c:C.navy},{v:v("AUTOS",o.AUT),c:C.sky,tx:"var(--fg)"},{v:v("PICKUP",o.PU),c:C.teal},{v:v("COMM",o.COM),c:C.gold,tx:"var(--fg)"}],v=>fmt(v,0),3)}
+ else{const pp=D.part.map(p=>p*100),mine=[...pp.slice(0,I26+1),...o.p.slice(1).map(p=>p*100)],base=YR.map((_,i)=>i<I26?null:b.p[i-I26]*100);
+  document.getElementById("l3").innerHTML=lgd([["Participación SUV con tus supuestos",C.navy],["Base",C.grey,1]]);
+  el.innerHTML=svgLines({x:YR,series:[{v:mine,c:C.navy},{v:base,c:C.grey,dash:"4 3",dots:false}],split:I26,fy:v=>fmt(v,0)+"%",zero:false,aria:"Participación SUV"})}
+ const d=k=>fmtS((o[k][i4]/b[k][i4]-1)*100,1)+" %";
+ document.getElementById("r3").innerHTML=`<span class="y">2030</span><span><i class="sw" style="background:${C.navy}"></i>SUV: <b>${K(o.SUV[i4])}</b> (${d("SUV")})</span><span><i class="sw" style="background:${C.sky}"></i>Automóviles: <b>${K(o.AUT[i4])}</b> (${d("AUT")})</span><span><i class="sw" style="background:${C.teal}"></i>Pick Up: <b>${K(o.PU[i4])}</b> (${d("PU")})</span><span><i class="sw" style="background:${C.gold}"></i>Commercial: <b>${K(o.COM[i4])}</b> (${d("COM")})</span><span class="note">miles de unidades; entre paréntesis, vs. base</span>`}
+document.getElementById("sl").innerHTML=SLD.map(([k,t,u,lo,hi,st,f])=>`<div class="sld"><div class="sh"><span>${t}<em> · ${u}</em></span><b id="v_${k}">${f(PAR[k])}</b></div><input type="range" id="i_${k}" min="${lo}" max="${hi}" step="${st}" value="${PAR[k]}" aria-label="${t}"></div>`).join("");
+SLD.forEach(([k,,,,,,f])=>{const i=document.getElementById("i_"+k);i.oninput=()=>{PAR[k]=+i.value;document.getElementById("v_"+k).textContent=f(PAR[k]);r3()}});
+document.getElementById("rst").onclick=()=>{PAR=Object.assign({},BASE);SLD.forEach(([k,,,,,,f])=>{document.getElementById("i_"+k).value=PAR[k];document.getElementById("v_"+k).textContent=f(PAR[k])});r3()};
+segs("s3",[["seg","Unidades por segmento"],["part","Participación del SUV en Ligeros"]],tab3,v=>{tab3=v;r3()});r3();
+</script>
+</body>
+</html>
